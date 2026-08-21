@@ -21,11 +21,11 @@ import org.springframework.web.server.ResponseStatusException;
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
-    private UserRepository userRepository;
-    private PasswordEncoder passwordEncoder;
-    private JwtUtil jwtUtil;
-    private AuthenticationManager authenticationManager;
-    private CustomUserDetailsService customUserDetailsService;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
+    private final AuthenticationManager authenticationManager;
+    private final CustomUserDetailsService customUserDetailsService;
 
     public AuthController(UserRepository userRepository , PasswordEncoder passwordEncoder , JwtUtil jwtUtil , AuthenticationManager authenticationManager, CustomUserDetailsService customUserDetailsService){
         this.jwtUtil=jwtUtil;
