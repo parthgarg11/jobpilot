@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import api from '../api/axios';
+import api from '../api/axios.js';
 
 const STATUS_OPTIONS = [
   'APPLIED',
-  'SCREENING', 
+  'SCREENING',
   'INTERVIEW',
   'OFFER',
   'REJECTED',
@@ -19,6 +19,9 @@ function ApplicationForm() {
   const [loading, setLoading] = useState(false);
   const [fetchingData, setFetchingData] = useState(isEditing);
   const [error, setError] = useState('');
+  const [aiResult, setAiResult] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiActiveFeature, setAiActiveFeature] = useState('');
 
   const [form, setForm] = useState({
     companyName: '',
@@ -30,7 +33,6 @@ function ApplicationForm() {
     notes: '',
   });
 
-  // If editing, fetch existing application data
   useEffect(() => {
     if (isEditing) {
       fetchApplication();
@@ -80,6 +82,33 @@ function ApplicationForm() {
     }
   };
 
+  const handleAiFeature = async (feature) => {
+    if (!form.jobDescriptionText) {
+      alert('Please paste a job description first.');
+      return;
+    }
+    setAiLoading(true);
+    setAiActiveFeature(feature);
+    setAiResult('');
+
+    const endpoints = {
+      skills: '/api/ai/extract-skills',
+      coverLetter: '/api/ai/generate-cover-letter',
+      interview: '/api/ai/interview-prep',
+    };
+
+    try {
+      const response = await api.post(endpoints[feature], {
+        jobDescriptionText: form.jobDescriptionText,
+      });
+      setAiResult(response.data.result);
+    } catch (err) {
+      setAiResult('Failed to get AI response. Please try again.');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   if (fetchingData) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -112,7 +141,7 @@ function ApplicationForm() {
         </h2>
 
         {error && (
-          <div className="bg-red-500/10 border border-red-500/20 text-red-400 
+          <div className="bg-red-500/10 border border-red-500/20 text-red-400
                         text-sm rounded-lg p-3 mb-6">
             {error}
           </div>
@@ -133,9 +162,9 @@ function ApplicationForm() {
                 onChange={handleChange}
                 placeholder="Google"
                 required
-                className="w-full bg-slate-800 border border-slate-700 text-white 
+                className="w-full bg-slate-800 border border-slate-700 text-white
                          placeholder-slate-500 rounded-lg px-4 py-2.5 text-sm
-                         focus:outline-none focus:ring-2 focus:ring-indigo-500 
+                         focus:outline-none focus:ring-2 focus:ring-indigo-500
                          focus:border-transparent transition"
               />
             </div>
@@ -150,9 +179,9 @@ function ApplicationForm() {
                 onChange={handleChange}
                 placeholder="Software Engineer"
                 required
-                className="w-full bg-slate-800 border border-slate-700 text-white 
+                className="w-full bg-slate-800 border border-slate-700 text-white
                          placeholder-slate-500 rounded-lg px-4 py-2.5 text-sm
-                         focus:outline-none focus:ring-2 focus:ring-indigo-500 
+                         focus:outline-none focus:ring-2 focus:ring-indigo-500
                          focus:border-transparent transition"
               />
             </div>
@@ -168,9 +197,9 @@ function ApplicationForm() {
                 name="status"
                 value={form.status}
                 onChange={handleChange}
-                className="w-full bg-slate-800 border border-slate-700 text-white 
+                className="w-full bg-slate-800 border border-slate-700 text-white
                          rounded-lg px-4 py-2.5 text-sm
-                         focus:outline-none focus:ring-2 focus:ring-indigo-500 
+                         focus:outline-none focus:ring-2 focus:ring-indigo-500
                          focus:border-transparent transition"
               >
                 {STATUS_OPTIONS.map(status => (
@@ -187,9 +216,9 @@ function ApplicationForm() {
                 name="appliedDate"
                 value={form.appliedDate}
                 onChange={handleChange}
-                className="w-full bg-slate-800 border border-slate-700 text-white 
+                className="w-full bg-slate-800 border border-slate-700 text-white
                          rounded-lg px-4 py-2.5 text-sm
-                         focus:outline-none focus:ring-2 focus:ring-indigo-500 
+                         focus:outline-none focus:ring-2 focus:ring-indigo-500
                          focus:border-transparent transition"
               />
             </div>
@@ -206,19 +235,19 @@ function ApplicationForm() {
               value={form.jobDescriptionUrl}
               onChange={handleChange}
               placeholder="https://careers.google.com/jobs/123"
-              className="w-full bg-slate-800 border border-slate-700 text-white 
+              className="w-full bg-slate-800 border border-slate-700 text-white
                        placeholder-slate-500 rounded-lg px-4 py-2.5 text-sm
-                       focus:outline-none focus:ring-2 focus:ring-indigo-500 
+                       focus:outline-none focus:ring-2 focus:ring-indigo-500
                        focus:border-transparent transition"
             />
           </div>
 
-          {/* JD Text */}
+          {/* JD Text + AI Features */}
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-1.5">
               Job description
               <span className="text-slate-500 font-normal ml-2">
-                — paste the full JD here for AI analysis later
+                — paste the full JD here for AI analysis
               </span>
             </label>
             <textarea
@@ -227,11 +256,60 @@ function ApplicationForm() {
               onChange={handleChange}
               placeholder="Paste the full job description here..."
               rows={6}
-              className="w-full bg-slate-800 border border-slate-700 text-white 
+              className="w-full bg-slate-800 border border-slate-700 text-white
                        placeholder-slate-500 rounded-lg px-4 py-2.5 text-sm
-                       focus:outline-none focus:ring-2 focus:ring-indigo-500 
+                       focus:outline-none focus:ring-2 focus:ring-indigo-500
                        focus:border-transparent transition resize-none"
             />
+
+            {/* AI Buttons — only show when JD text exists */}
+            {form.jobDescriptionText && (
+              <div className="mt-3 flex items-center gap-2 flex-wrap">
+                <span className="text-slate-500 text-xs">AI tools:</span>
+                {[
+                  { key: 'skills', label: '🔍 Extract Skills' },
+                  { key: 'coverLetter', label: '✉️ Cover Letter' },
+                  { key: 'interview', label: '🎯 Interview Prep' },
+                ].map((btn) => (
+                  <button
+                    key={btn.key}
+                    type="button"
+                    onClick={() => handleAiFeature(btn.key)}
+                    disabled={aiLoading}
+                    className={`text-xs px-3 py-1.5 rounded-lg border transition
+                      ${aiActiveFeature === btn.key && aiLoading
+                        ? 'bg-indigo-600/20 border-indigo-500/30 text-indigo-400 cursor-wait'
+                        : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white hover:border-slate-600'
+                      }`}
+                  >
+                    {aiActiveFeature === btn.key && aiLoading
+                      ? 'Thinking...'
+                      : btn.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* AI Result */}
+            {aiResult && (
+              <div className="mt-4 bg-slate-800/50 border border-slate-700 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-indigo-400 text-xs font-medium uppercase tracking-wider">
+                    AI Result
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setAiResult('')}
+                    className="text-slate-500 hover:text-white text-xs transition"
+                  >
+                    Clear
+                  </button>
+                </div>
+                <div className="text-slate-300 text-sm whitespace-pre-wrap leading-relaxed">
+                  {aiResult}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Notes */}
@@ -245,9 +323,9 @@ function ApplicationForm() {
               onChange={handleChange}
               placeholder="Referral from John, follow up next week..."
               rows={3}
-              className="w-full bg-slate-800 border border-slate-700 text-white 
+              className="w-full bg-slate-800 border border-slate-700 text-white
                        placeholder-slate-500 rounded-lg px-4 py-2.5 text-sm
-                       focus:outline-none focus:ring-2 focus:ring-indigo-500 
+                       focus:outline-none focus:ring-2 focus:ring-indigo-500
                        focus:border-transparent transition resize-none"
             />
           </div>
@@ -258,7 +336,7 @@ function ApplicationForm() {
               type="submit"
               disabled={loading}
               className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800
-                       disabled:cursor-not-allowed text-white font-medium rounded-lg 
+                       disabled:cursor-not-allowed text-white font-medium rounded-lg
                        px-6 py-2.5 text-sm transition"
             >
               {loading
@@ -269,7 +347,7 @@ function ApplicationForm() {
             <button
               type="button"
               onClick={() => navigate('/dashboard')}
-              className="text-slate-400 hover:text-white text-sm px-4 py-2.5 
+              className="text-slate-400 hover:text-white text-sm px-4 py-2.5
                        rounded-lg hover:bg-slate-800 transition"
             >
               Cancel
